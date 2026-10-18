@@ -1,0 +1,20 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const { parseCSV, inspectCSV, MAX_BYTES } = require('./checker.js');
+const codes = text => inspectCSV(text).issues.map(i => i.code);
+test('正常 CSV', () => { const r = inspectCSV('名称,数量\n模板,2'); assert.equal(r.dataRows, 1); assert.equal(r.columns, 2); assert.deepEqual(r.issues, []); });
+test('引号逗号、转义引号、多行字段与原始位置', () => {
+  const r = parseCSV('a,b\n"x,y","他说""好""\n下一行"\nz,2');
+  assert.deepEqual(r.map(row => row.cells.map(c => c.value)), [['a','b'], ['x,y','他说"好"\n下一行'], ['z','2']]);
+  assert.equal(r[1].line, 2); assert.equal(r[1].cells[1].line, 2); assert.equal(r[1].cells[1].column, 7); assert.equal(r[2].line, 4);
+});
+test('BOM 与 CRLF', () => { const r = parseCSV('\uFEFFa,b\r\n"x\r\ny",2\r\n'); assert.equal(r.length, 2); assert.equal(r[0].cells[0].value, 'a'); assert.equal(r[1].cells[0].value, 'x\ny'); assert.equal(r[1].line, 2); });
+test('尾换行不增加数据记录', () => { assert.equal(parseCSV('a\nx\n').length, 2); assert.equal(parseCSV('a\nx\r\n').length, 2); assert.equal(parseCSV('a\nx\n\n').length, 3); });
+test('中间空记录保留并定位', () => { const r = inspectCSV('a,b\nx,1\n\ny,2'); assert.equal(r.dataRows, 3); assert.equal(r.rows[2].cells[0].value, ''); assert.deepEqual(r.issues.find(i => i.code === 'EMPTY_ROW'), {code:'EMPTY_ROW',message:'完全空数据记录（所有字段为空或仅含空白），已保留。',row:3,field:null,line:3,column:1}); });
+test('空及重复表头', () => { assert.deepEqual(codes('a, a , \nx,y,z'), ['DUPLICATE_HEADER','EMPTY_HEADER']); });
+test('列数不齐', () => { const r = inspectCSV('a,b\nx\ny,2,3'); assert.equal(r.issues.filter(i => i.code === 'COLUMN_COUNT').length, 2); assert.equal(r.issues[0].line, 2); });
+test('非法引号不被当作正常解析', () => { for (const text of ['a\n"no', 'a\nx"y', 'a\n"x"y', 'a\n"x" ']) { const r = inspectCSV(text); assert.equal(r.parsed, false); assert.equal(r.issues[0].code, 'PARSE_ERROR'); assert.ok(r.issues[0].line >= 2); } });
+test('公式文本风险明确定位', () => { const r = inspectCSV('a,b\nx,"=HYPERLINK(""https://example.com"")"'); const i = r.issues[0]; assert.equal(i.code, 'FORMULA_PREFIX'); assert.equal(i.row, 2); assert.equal(i.field, 2); assert.equal(i.line, 2); assert.equal(i.column, 3); });
+test('负数属于潜在前缀提示，不判断恶意', () => { const r = inspectCSV('a\n-12'); assert.equal(r.issues[0].code, 'FORMULA_PREFIX'); assert.match(r.issues[0].message, /负数等内容可能合法/); assert.match(r.issues[0].message, /不判断恶意/); });
+test('XSS 内容作为原文保留', () => { const xss = '<img src=x onerror=alert(1)>'; assert.equal(parseCSV('a\n' + xss)[1].cells[0].value, xss); });
+test('空输入、尾空字段、UTF-8 大小限制', () => { assert.deepEqual(codes(''), ['EMPTY_INPUT']); assert.deepEqual(parseCSV('a,b\nx,')[1].cells.map(c => c.value), ['x','']); assert.deepEqual(codes('中'.repeat(Math.ceil(MAX_BYTES / 3) + 1)), ['INPUT_LIMIT']); });

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="免费原创 CSV 交付前检查器，在浏览器本地检查表头、行列与潜在公式文本风险。">
+  <title>CSV 交付前检查器</title><link rel="stylesheet" href="styles.css">
+  <script defer src="checker.js"></script><script defer src="app.js"></script>
+</head>
+<body>
+  <main>
+    <header><p class="eyebrow">REBORN CAT · 原创工具演示</p><h1>交付之前，<br>再检查一遍 CSV。</h1><p class="intro">发现容易漏看的表头、行列和文本风险。数据只在当前浏览器内处理。</p><div class="tags"><span>免费使用</span><span>无需账号</span><span>支持离线</span></div></header>
+    <section class="workspace" aria-labelledby="input-heading">
+      <div class="section-title"><h2 id="input-heading">01 / 粘贴数据</h2><div class="samples"><button id="sample-good" type="button">正常样例</button><button id="sample-bad" type="button">问题样例</button></div></div>
+      <label for="csv-input">UTF-8 CSV 文本 · 第一条记录作为表头</label>
+      <textarea id="csv-input" spellcheck="false" placeholder="名称,数量,备注&#10;示例,2,待交付" aria-describedby="input-help"></textarea>
+      <p id="input-help" class="muted">仅支持逗号分隔；上限 500 KiB（512,000 字节）。可解析引号内逗号、双引号和换行。不支持 XLSX、PDF 或文件导入。</p>
+      <div class="actions"><button id="check" class="primary" type="button">检查 CSV <span aria-hidden="true">↗</span></button><button id="clear" type="button">清空</button><button id="download" type="button" disabled>下载检查结果 JSON</button></div>
+    </section>
+    <section id="results" class="results" aria-labelledby="result-heading" hidden>
+      <div class="section-title"><h2 id="result-heading">02 / 检查结果</h2><p id="summary" role="status" aria-live="polite"></p></div>
+      <p class="muted">“记录”按 CSV 逻辑记录计数，包含表头；“原文行 / 字符”从 1 开始，字段定位指向字段起点。带引号换行的字段可能跨多个原文行。</p>
+      <ol id="issues"></ol><p id="issue-limit" class="muted"></p>
+      <h3>数据预览</h3><p id="preview-note" class="muted"></p><div class="table-wrap"><table id="preview"></table></div>
+    </section>
+    <aside><h2>检查范围</h2><p>检查列数不齐、空白或重复表头、完全空数据记录，以及以 =、+、-、@ 开头（忽略前导空白）的潜在公式文本。负数等内容可能合法，提示不等同于恶意判断。</p><p>此工具不做对账、金额匹配、自动修正或完整安全审计。未发现所列问题，也不能据此认定数据正确或安全。输入不会上传，不保存到本地存储；关闭页面后需自行保留原文。</p></aside>
+    <footer><span>免费原创展示 · 无付费权益或交付承诺</span><a href="https://afdian.com/a/reborncatlig" target="_blank" rel="noopener noreferrer">创作主页 ↗</a></footer>
+  </main>
+</body>
+</html>
